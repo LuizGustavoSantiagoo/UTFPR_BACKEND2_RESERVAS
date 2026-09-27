@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -19,7 +20,7 @@ class DatabaseSeeder extends Seeder
 
         User::firstOrCreate(
             ['email' => 'test@example.com'],
-            ['name' => 'Test User', 'password' => '12345678', 'email_verified_at' => now()],
+            ['name' => 'Test User', 'password' => '12345678', 'email_verified_at' => now(), 'born_date' => '2000-01-01', 'role' => Role::Admin],
         );
     }
 }

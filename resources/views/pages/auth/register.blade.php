@@ -30,6 +30,16 @@
                 placeholder="email@example.com"
             />
 
+            <!-- Born Date -->
+            <flux:input
+                name="born_date"
+                :label="__('Born date')"
+                :value="old('born_date')"
+                type="date"
+                required
+                :max="now()->subDay()->toDateString()"
+            />
+
             <!-- Password -->
             <flux:input
                 name="password"
