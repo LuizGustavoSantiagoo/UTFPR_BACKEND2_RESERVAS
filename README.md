@@ -528,7 +528,7 @@ Detalhamento em [docs/sprints.md](docs/sprints.md).
 
 Vídeo de até 3 minutos apresentando a proposta, os objetivos e as funcionalidades planejadas:
 
-LINK_DO_VIDEO (a ser adicionado)
+[Apresentação do sistema no YouTube](https://youtu.be/kvNjc-mazL0) (vídeo não listado, 2min31s)
 
 ## Como executar localmente
 
