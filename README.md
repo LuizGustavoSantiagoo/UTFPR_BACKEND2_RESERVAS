@@ -1,4 +1,5 @@
-# Sistema de Reserva de Ambientes
+# Sistema de reserva de ambientes para universidades — Laravel 13 + Livewire 4. Projeto da disciplina Backend com Framework (UTFPR).
+
 
 Aplicação web para reserva de ambientes institucionais (auditórios, quadras, salas de reunião, laboratórios e outros espaços físicos), desenvolvida em Laravel com Livewire.
 
