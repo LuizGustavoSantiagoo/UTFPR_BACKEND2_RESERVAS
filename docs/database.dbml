@@ -1,0 +1,226 @@
+// ============================================================
+// Sistema de Reserva de Ambientes - UTFPR, Backend 2
+// Diagrama para importar em https://dbdiagram.io
+//
+// Este arquivo espelha o bloco DBML do README.md. Ao alterar um,
+// altere o outro.
+//
+// Revisão de 26/09/2026: hierarquia bloco -> ambiente -> subambiente,
+// perfil de responsável de bloco, grade única de funcionamento,
+// reserva direta e exclusividade por slot (reservation_slots).
+// ============================================================
+
+// ---------- Enums ----------
+
+Enum role {
+  admin
+  manager [note: 'responsável de bloco']
+  user
+}
+
+Enum reservation_status {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+Enum reservation_origin {
+  request [note: 'solicitada por usuário comum e submetida a deferimento']
+  direct  [note: 'registrada diretamente por admin ou responsável, já deferida']
+}
+
+// ---------- Pessoas ----------
+
+Table users {
+  id                        bigint       [pk, increment]
+  name                      varchar
+  email                     varchar      [unique, not null]
+  born_date                 date         [not null]
+  role                      role         [not null, default: 'user']
+  email_verified_at         timestamp    [null]
+  password                  varchar
+  two_factor_secret         text         [null]
+  two_factor_recovery_codes text         [null]
+  two_factor_confirmed_at   timestamp    [null]
+  remember_token            varchar(100) [null]
+  created_at                timestamp
+  updated_at                timestamp
+
+  Note: 'Cadastro público cria role = user. Contas manager e admin são criadas pelo admin.'
+}
+
+// ---------- Estrutura física ----------
+
+Table blocks {
+  id          bigint       [pk, increment]
+  name        varchar(120) [unique, not null]
+  code        varchar(20)  [unique, null, note: 'sigla curta, ex.: B1, LAB']
+  description text         [null]
+  is_active   boolean      [not null, default: true]
+  created_by  bigint       [null, ref: > users.id]
+  created_at  timestamp
+  updated_at  timestamp
+
+  Note: 'Bloco é organização: não recebe reserva. Agrupa ambientes e define quem é responsável.'
+}
+
+Table block_user {
+  block_id   bigint    [not null, ref: > blocks.id]
+  user_id    bigint    [not null, ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (block_id, user_id) [pk]
+  }
+
+  Note: 'Responsáveis por bloco. Um usuário pode responder por mais de um bloco; um bloco pode ter mais de um responsável.'
+}
+
+Table places {
+  id                        bigint       [pk, increment]
+  block_id                  bigint       [not null, ref: > blocks.id, note: 'em subambiente, igual ao do pai']
+  parent_id                 bigint       [null, ref: > places.id, note: 'NULL = ambiente; preenchido = subambiente']
+  name                      varchar(120) [not null]
+  type                      varchar(40)  [not null, note: 'sala | laboratório | auditório | quadra | ...']
+  description               text         [null]
+  capacity                  int          [null]
+  is_reservable             boolean      [not null, default: true, note: 'admin decide o que aceita reserva']
+  is_active                 boolean      [not null, default: true]
+  min_advance_minutes       int          [not null, default: 0, note: 'só vale para solicitação de usuário']
+  max_advance_days          smallint     [not null, default: 30, note: 'só vale para solicitação de usuário']
+  max_slots_per_reservation tinyint      [not null, default: 1, note: 'só vale para solicitação de usuário']
+  created_by                bigint       [null, ref: > users.id]
+  created_at                timestamp
+  updated_at                timestamp
+
+  Indexes {
+    (block_id, parent_id)
+    (block_id, is_active)
+  }
+
+  Note: '''
+  Ambiente e subambiente na mesma tabela. Profundidade máxima 2: subambiente não tem filhos.
+  Nome único entre irmãos é validado na aplicação, parent_id NULL não colide em índice único.
+  '''
+}
+
+// ---------- Grade e fechamentos ----------
+
+Table operating_hours {
+  id         bigint    [pk, increment]
+  weekday    tinyint   [unique, not null, note: '0=domingo .. 6=sábado']
+  is_open    boolean   [not null, default: false]
+  opens_at   time      [null]
+  closes_at  time      [null]
+  updated_at timestamp
+
+  Note: '''
+  Grade única da universidade, válida para todos os blocos e lugares.
+  Padrão: seg a sex 06:00 às 23:00, sáb e dom fechados.
+  Os slots (60 min) são gerados em memória a partir da janela do dia; nada é materializado.
+  '''
+}
+
+Table closures {
+  id         bigint       [pk, increment]
+  date       date         [not null]
+  block_id   bigint       [null, ref: > blocks.id]
+  place_id   bigint       [null, ref: > places.id]
+  starts_at  time         [null, note: 'nulo = dia inteiro']
+  ends_at    time         [null, note: 'nulo = dia inteiro']
+  reason     varchar(160) [not null]
+  created_by bigint       [null, ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    date
+    (block_id, date)
+    (place_id, date)
+  }
+
+  Note: '''
+  Feriado, manutenção, evento. O escopo vem do par (block_id, place_id):
+  ambos nulos = câmpus inteiro; só block_id = o bloco; place_id = o lugar (e seus filhos).
+  '''
+}
+
+// ---------- Reservas ----------
+
+Table reservations {
+  id           bigint             [pk, increment]
+  place_id     bigint             [not null, ref: > places.id, note: 'ambiente ou subambiente']
+  user_id      bigint             [not null, ref: > users.id, note: 'quem solicitou, ou quem registrou a reserva direta']
+  origin       reservation_origin [not null, default: 'request']
+  date         date               [not null, note: 'data local da reserva']
+  starts_at    datetime           [not null, note: 'UTC; derivado de date + primeiro slot']
+  ends_at      datetime           [not null, note: 'UTC; derivado de date + fim do último slot']
+  status       reservation_status [not null, default: 'pending']
+  notes        text               [null, note: 'justificativa do solicitante; obrigatória na reserva direta']
+  reason       varchar(255)       [null, note: 'motivo do indeferimento ou cancelamento']
+  reviewed_at  timestamp          [null]
+  reviewed_by  bigint             [null, ref: > users.id, note: 'admin ou responsável do bloco']
+  cancelled_at timestamp          [null]
+  cancelled_by bigint             [null, ref: > users.id]
+  created_at   timestamp
+  updated_at   timestamp
+
+  Indexes {
+    (place_id, date)
+    (user_id, starts_at)
+    status
+  }
+
+  Note: 'Reserva direta nasce approved, com origin = direct, reviewed_by = user_id e reviewed_at = created_at.'
+}
+
+Table reservation_slots {
+  id             bigint  [pk, increment]
+  reservation_id bigint  [not null, ref: > reservations.id]
+  place_id       bigint  [not null, ref: > places.id, note: 'copiado da reserva para compor o índice único']
+  date           date    [not null]
+  starts_at      time    [not null, note: 'início do slot, alinhado à grade']
+  active_key     tinyint [null, note: '1 quando a reserva está deferida; NULL caso contrário']
+
+  Indexes {
+    (place_id, date, starts_at, active_key) [unique]
+    reservation_id
+  }
+
+  Note: '''
+  Uma linha por slot reservado: uma solicitação de 14h às 17h gera três linhas.
+  O índice único só colide entre linhas com active_key = 1, porque NULL nunca colide:
+  é o que permite várias solicitações pendentes no mesmo slot e garante, no banco,
+  que só uma delas seja deferida. Cancelar devolve active_key a NULL.
+  Bloqueio entre ambiente e subambiente é garantido pela transação com trava no ambiente-raiz.
+  '''
+}
+
+// ---------- Autenticação e infraestrutura (Laravel + Fortify) ----------
+
+Table passkeys {
+  id            bigint    [pk, increment]
+  user_id       bigint    [not null, ref: > users.id]
+  name          varchar
+  credential_id varchar   [unique, not null]
+  credential    json
+  last_used_at  timestamp [null]
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+Table sessions {
+  id            varchar     [pk]
+  user_id       bigint      [null, ref: > users.id]
+  ip_address    varchar(45) [null]
+  user_agent    text        [null]
+  payload       longtext
+  last_activity int
+}
+
+Table password_reset_tokens {
+  email      varchar   [pk]
+  token      varchar
+  created_at timestamp [null]
+}
