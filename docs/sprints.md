@@ -132,14 +132,14 @@ Fecha o que a disciplina cobra como artefato e o que o código cobra como garant
 | ~~Rodar a suíte do CI contra MySQL em vez de SQLite~~ - concluída em 26/09 | - |
 | Fechar as ambiguidades do guia de estilo e revisar acessibilidade | Should |
 | ~~Escrever `docs/requisitos.md` com priorização MoSCoW~~ - concluída (v1.3, 26/09) | - |
-| Produzir o diagrama de classes - os de sequência já estão em [fluxos.md](fluxos.md) | Must |
-| Criar os protótipos de tela em `docs/prototipos/` | Should |
+| ~~Produzir o diagrama de classes~~ - concluída em 27/09 ([diagrama-classes.md](diagrama-classes.md)); os de sequência estão em [fluxos.md](fluxos.md) | - |
+| ~~Criar os protótipos de tela em `docs/prototipos/`~~ - concluída em 27/09 | - |
 | Conferir os artefatos publicados e o README para a entrega | Must |
 | ~~Gravar o vídeo de apresentação de até 3 minutos~~ - concluída em 27/09 | - |
 
 **Entregável:** repositório com todos os artefatos referenciados pelo README efetivamente publicados, CI verde e vídeo disponível.
 
-**Risco:** o README anuncia o diagrama de classes e os protótipos, que ainda não existem.
+**Risco:** deixar a conferência dos artefatos para a véspera da avaliação.
 
 ---
 

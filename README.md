@@ -507,7 +507,7 @@ Table password_reset_tokens {
 | Modelagem do banco de dados | [Seção Banco de dados](#banco-de-dados) e [docs/database.dbml](docs/database.dbml) |
 | Planejamento de sprints | [docs/sprints.md](docs/sprints.md) |
 | Guia de estilo da interface | [STYLE_GUIDE.md](STYLE_GUIDE.md) |
-| Diagrama de classes | `docs/diagrama-classes.png` (a ser adicionado) |
+| Diagrama de classes | [docs/diagrama-classes.md](docs/diagrama-classes.md) - domínio (models e enums) e camada de aplicação (services e policies) |
 | Protótipos de telas | [docs/prototipos/](docs/prototipos/) - 21 capturas: os três perfis em notebook, a disponibilidade em quatro larguras e o modo escuro |
 
 ## Planejamento
